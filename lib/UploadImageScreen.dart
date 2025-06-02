@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
@@ -12,6 +13,25 @@ class UploadImageScreen extends StatefulWidget {
 
 class _UploadImageScreenState extends State<UploadImageScreen> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Sau khi build xong thì focus vào TextField
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_focusNode);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
   String? _aufnr;
   File? _imageFile;
   bool _loading = false;
@@ -72,43 +92,18 @@ class _UploadImageScreenState extends State<UploadImageScreen> {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
-      imageQuality: 100, // chất lượng cao nhất
+      imageQuality: 100,
     );
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
       });
+
+      // Sau khi chụp xong thì tự upload luôn
+      await _uploadFile();
     }
   }
 
-  // Future<void> _editImage(File file) async {
-  //   final croppedFile = await ImageCropper().cropImage(
-  //     sourcePath: file.path,
-  //     aspectRatioPresets: [
-  //       CropAspectRatioPreset.original,
-  //       CropAspectRatioPreset.ratio4x3,
-  //       CropAspectRatioPreset.ratio16x9,
-  //     ],
-  //     uiSettings: [
-  //       AndroidUiSettings(
-  //         toolbarTitle: 'Chỉnh sửa ảnh',
-  //         toolbarColor: Colors.deepOrange,
-  //         toolbarWidgetColor: Colors.white,
-  //         initAspectRatio: CropAspectRatioPreset.original,
-  //         lockAspectRatio: false,
-  //       ),
-  //       IOSUiSettings(
-  //         title: 'Chỉnh sửa ảnh',
-  //       ),
-  //     ],
-  //   );
-  //
-  //   if (croppedFile != null) {
-  //     setState(() {
-  //       _imageFile = File(croppedFile.path);
-  //     });
-  //   }
-  // }
 
 
   @override
@@ -120,20 +115,44 @@ class _UploadImageScreenState extends State<UploadImageScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             TextField(
               controller: _controller,
-              decoration: const InputDecoration(
+              focusNode: _focusNode,
+              decoration: InputDecoration(
                 labelText: "Nhập mã AUFNR",
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: _controller.text.isNotEmpty
+                    ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    setState(() {
+                      _controller.clear();
+                      _aufnr = null;
+                      _imageFile = null;
+                      _result = "";
+                    });
+                    FocusScope.of(context).requestFocus(_focusNode); // tự focus lại
+                  },
+                )
+                    : null,
               ),
-              onSubmitted: (value) {
+              onChanged: (_) {
+                setState(() {}); // để cập nhật trạng thái nút clear
+              },
+              onSubmitted: (value) async {
                 setState(() {
                   _aufnr = value.trim();
                   _result = "";
-                  _imageFile = null; // reset ảnh mỗi lần nhập mã mới
+                  _imageFile = null;
                 });
+
+                if (_aufnr != null && _aufnr!.isNotEmpty) {
+                  await _pickImage();
+                }
               },
             ),
+
             const SizedBox(height: 20),
 
             ElevatedButton.icon(
@@ -146,11 +165,6 @@ class _UploadImageScreenState extends State<UploadImageScreen> {
 
             if (_imageFile != null)
               Image.file(_imageFile!, height: 200),
-            // if (_imageFile != null)
-            //   GestureDetector(
-            //     onTap: () => _editImage(_imageFile!),
-            //     child: Image.file(_imageFile!, height: 200),
-            //   ),
 
             const SizedBox(height: 20),
 
@@ -160,6 +174,14 @@ class _UploadImageScreenState extends State<UploadImageScreen> {
             ),
 
             const SizedBox(height: 20),
+
+            ElevatedButton.icon(
+              onPressed: () {
+                SystemNavigator.pop(); // hoặc exit(0);
+              },
+              icon: const Icon(Icons.exit_to_app),
+              label: const Text("Thoát ứng dụng"),
+            ),
 
             Text(
               _result,
