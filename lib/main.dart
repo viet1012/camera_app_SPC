@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import 'AutoCameraUploadScreen.dart';
 import 'UploadImageScreen.dart';
 
 List<CameraDescription> cameras = [];
@@ -16,7 +17,8 @@ class CameraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Camera App',
-      home: UploadImageScreen(),
+      debugShowCheckedModeBanner: false,
+      home: AutoCameraUploadScreen(),
     );
   }
 }
