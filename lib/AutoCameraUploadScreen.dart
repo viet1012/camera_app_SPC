@@ -73,12 +73,16 @@ class _AutoCameraUploadScreenState extends State<AutoCameraUploadScreen> {
         } else {
           setState(() {
             _result = "❌ Upload thất bại: ${response.statusCode}";
+            _controller.clear();           // 👈 Clear input khi API lỗi
+            _aufnr = null;
           });
         }
       });
     } catch (e) {
       setState(() {
         _result = "⚠️ Lỗi: $e";
+        _controller.clear();             // 👈 Clear nếu gặp exception
+        _aufnr = null;
       });
     } finally {
       setState(() {
@@ -158,9 +162,13 @@ class _AutoCameraUploadScreenState extends State<AutoCameraUploadScreen> {
                         } else {
                           setState(() {
                             _result = "❗ Mã AUFNR phải đúng 12 ký tự.";
+                            _controller.clear();         // 👈 Clear input nếu mã sai
+                            _aufnr = null;
                           });
+                          FocusScope.of(context).requestFocus(_focusNode); // 👈 Đặt lại focus
                         }
                       },
+
                     ),
 
                     const SizedBox(height: 20),
