@@ -195,39 +195,47 @@ class _AutoCameraUploadScreenState extends State<AutoCameraUploadScreen> {
                                   labelText: "Nhập mã AUFNR (12 ký tự)",
                                   border: OutlineInputBorder(),
                                 ),
-                                maxLength: 12,
-                                keyboardType: TextInputType.none ,
-                                onSubmitted: (value) async {
-                                  final trimmed = value.trim();
+                                maxLength: 50,
+                                keyboardType: TextInputType.none,
+                                  onSubmitted: (value) async {
+                                    final trimmed = value.trim();
+                                    print("Original input: $trimmed");
 
-                                  // 🧠 Tách chuỗi nếu có định dạng CSV sau khi quét QR
-                                  final parts = trimmed.split(',');
-                                  String? extracted;
+                                    final parts = trimmed.split(',');
 
-                                  // Lấy phần tử đầu tiên có đúng 12 chữ số
-                                  for (final part in parts) {
-                                    final candidate = part.trim();
-                                    if (RegExp(r'^\d{12}$').hasMatch(candidate)) {
-                                      extracted = candidate;
-                                      break;
+                                    String? extracted;
+
+                                    for (final part in parts) {
+                                      final subparts = part.trim().split(RegExp(r'\s+'));
+                                      for (final subpart in subparts) {
+                                        final candidate = subpart.trim();
+                                        print("Checking candidate: '$candidate' (length: ${candidate.length})");
+                                        if (RegExp(r'^\d{12}$').hasMatch(candidate)) {
+                                          print("✅ MATCHED: $candidate");
+                                          extracted = candidate;
+                                          break;
+                                        }
+                                      }
+                                      if (extracted != null) break;
+                                    }
+
+                                    print("extracted: $extracted");
+
+                                    if (extracted != null) {
+                                      setState(() {
+                                        _aufnr = extracted!;
+                                        _controller.text = extracted;
+                                      });
+                                      await _takePictureAndUpload();
+                                    } else {
+                                      setState(() {
+                                        _result = "❗ Không tìm thấy mã AUFNR hợp lệ trong mã quét.";
+                                        _controller.clear();
+                                        _aufnr = null;
+                                      });
+                                      FocusScope.of(context).requestFocus(_focusNode);
                                     }
                                   }
-
-                                  if (extracted != null) {
-                                    setState(() {
-                                      _aufnr = extracted!;
-                                      _controller.text = extracted; // hiện lại lên ô nhập
-                                    });
-                                    await _takePictureAndUpload();
-                                  } else {
-                                    setState(() {
-                                      _result = "❗ Không tìm thấy mã AUFNR hợp lệ trong mã quét.";
-                                      _controller.clear();
-                                      _aufnr = null;
-                                    });
-                                    FocusScope.of(context).requestFocus(_focusNode);
-                                  }
-                                },
 
                                 // onSubmitted: (value) async {
                                 //   final trimmed = value.trim();
@@ -248,13 +256,14 @@ class _AutoCameraUploadScreenState extends State<AutoCameraUploadScreen> {
                               ),
                             ),
                           ),
-                          SizedBox(width: 20,),
+                          SizedBox(width: 20),
                           if (_isCameraInitialized && _cameraController != null)
                             Expanded(
                               child: SizedBox(
                                 width: 600,
                                 child: AspectRatio(
-                                  aspectRatio: _cameraController!.value.aspectRatio,
+                                  aspectRatio:
+                                      _cameraController!.value.aspectRatio,
                                   child: CameraPreview(_cameraController!),
                                 ),
                               ),
@@ -277,7 +286,6 @@ class _AutoCameraUploadScreenState extends State<AutoCameraUploadScreen> {
                         _result,
                         style: const TextStyle(fontSize: 16, color: Colors.red),
                       ),
-
                     ],
                   ),
                 ),
